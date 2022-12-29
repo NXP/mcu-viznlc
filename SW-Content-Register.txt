@@ -1,0 +1,180 @@
+Release Name: MCUXpresso Software Development Kit (SDK)
+Release Version: SDK_2_6_205_K32W061DK6, SDK_2_12_1_EVK-MIMXRT1060
+Package License: LICENSE.txt(LA_OPT_NXP_Software_License) - Additional Distribution use, section 2.3 applies
+NXP Product: NXP’s product with a part number of MIMXRT106FDVL6B or NXP’s product included in the NXP evaluation kit with a part number of SLN-VIZNLC-IOT
+                                      
+cmsis                      Name: CMSIS                                       
+                           Version: 5.2.0 / 5.3.2 / 5.4.0                                  
+                           Outgoing License: Apache License 2.0              
+                           License File: www.apache.org/licenses/LICENSE-2.0                   
+                           Format: source code                               
+                           Description: Vendor-independent hardware          
+                           abstraction layer for microcontrollers that are   
+                           based on Arm Cortex processors, distributed by    
+                           ARM. cores                                        
+                           Location: {project}/CMSIS/                                  
+                           Origin: ARM (Apache-2.0) -                        
+                           https://github.com/ARM-software/CMSIS_5/releases
+
+SDK_Components             Name: SDK components and board peripheral drivers 
+                           Version: 2.12.1                                       
+                           Outgoing License: BSD-3-Clause                    
+                           License File: COPYING-BSD-3                       
+                           Format: source code                               
+                           Description: SDK components and board peripheral  
+                           drivers, for example, flash and codec drivers.    
+                           Location: {project}/component                            
+                           Origin: NXP (BSD-3-Clause)                        
+
+usb                        Name: USB                                         
+                           Version: 2.8.2                                    
+                           Outgoing License: BSD-3-Clause                    
+                           License File: COPYING-BSD-3                       
+                           Format: source code                               
+                           Description: NXP USB stack. This is a version of  
+                           the USB stack that has been integrated with the   
+                           MCUXpresso SDK.                                   
+                           Location: {project}/usb                          
+                           Origin: NXP (BSD-3-Clause)                        
+
+freertos                   Name: FreeRTOS                                    
+                           Version:V10.4.3 LTS Patch 2                             
+                           Outgoing License: MIT                             
+                           License File: {project}/freertos/LICENSE               
+                           Format: source code                               
+                           Description: IoT operating system for             
+                           microcontrollers                                  
+                           Location: {project}/freertos                           
+                           Origin: Real Time Engineers, Ltd. (MIT)           
+                           Url: https://aws.amazon.com/freertos/                                                                                       
+
+sdmmc                      Name: SD MMC SDIO Card middleware                 
+                           Version: 2.2.7                                    
+                           Outgoing License: BSD-3-Clause                    
+                           License File: COPYING-BSD-3                       
+                           Format: source code                               
+                           Description: A software component support SD card,
+                           eMMC card, SDIO card.                             
+                           Location: {project}/sdmmc                        
+                           Origin: NXP (BSD-3-Clause)                        
+
+mmcau                      Name: mmCAU S/W Library                           
+                           Version: 2.0.1                                    
+                           Outgoing License: BSD-3-Clause                    
+                           License File: COPYING-BSD-3                       
+                           Format: source code                               
+                           Description: S/W library that works with the      
+                           memory-mapped cryptographic acceleration unit     
+                           present on some MCUXpresso SoCs                                          
+                           Origin: NXP (BSD-3-Clause)                                         
+
+LittleFS                   Name: LittleFS                                    
+                           Version: 2.2.1                                    
+                           Outgoing License: BSD-3-Clause                    
+                           License File: {project}/littlefs/LICENSE.md      
+                           Format: source code                               
+                           Description: LittleFS - A little fail-safe        
+                           filesystem designed for microcontrollers                              
+                           Origin: Little FS (Christopher Haster)                                           
+                           Url: https://github.com/littlefs-project/littlefs 
+
+sln_iot_common_platform    Name: IoT Solutions Common Platform               
+                           Version: 1.0.1                                    
+                           Outgoing License: LA_OPT_NXP_Software_License
+                           License File: LICENSE.txt
+                           Format: Source                                    
+                           Description: Common code for IoT Solutions                     
+                           Origin: NXP (Proprietary)                                      
+
+oasis                      Name: IoT Solution Oasis Library                  
+                           Version: 4.86.0 / 1.51.0
+                           Outgoing License: Proprietary                     
+                           License File: LICENSE.txt
+                           Format: object code & header files                
+                           Description: Oasis library which does face        
+                           detection and recognition with enhanced security, 
+                           compiled for M7 and ARMV7 
+                           Origin: NXP
+
+framework                  Name: IoT Solution framework Library                  
+                           Version: 2.0
+                           Outgoing License: Proprietary                     
+                           License File: LICENSE.txt
+                           Format: object code & header files                
+                           Description: framework library for vision and vioce application,
+                           compiled for M7.                                                        
+                           Origin: NXP                                      
+
+mbedtls                    Name: Mbed TLS                                    
+                           Version: 2.28.0                                   
+                           Outgoing License: Apache-2.0                      
+                           License File: {project}/mbedtls/apache-2.0.txt   
+                           Format: source code                               
+                           Description: Cryptographic and SSL/TLS Library    
+                           Location: {project}/mbedtls                      
+                           Origin: ARM(Apache-2.0) -                         
+                           https://github.com/ARMmbed/mbedtls/releases/tag/mb
+                           edtls-2.28.0                                      
+
+lwip                       Name: lwIP TCP/IP Stack                           
+                           Version: lwIP git repository (2021-05-11, branch:
+                           master, SHA-1:                                    
+                           7ec4e9be304e7f8953740f10b2c810a292e89449)         
+                           Outgoing License: BSD-3-Clause                    
+                           License File: {project}/lwip/COPYING             
+                           Format: source code                               
+                           Description: A light-weight TCP/IP stack          
+                           Location: {project}/lwip                         
+                           Origin: Swedish Institute of Computer Science     
+                           Url: http://savannah.nongnu.org/projects/lwip     
+
+rt106f_smart_lock          Name: rt106f_smart_lock
+                           Version: 1.1.2
+                           Outgoing License: LA_OPT_NXP_Software_License
+                           License File: LICENSE.txt
+                           Format: source code & object code                            
+                           Description: NXP's EdgeReady MCU-based solution for 
+                           face recognition leverages the i.MX RT106F crossover
+                           MCU, enabling developers to quickly and easily add 
+                           face recognition with advanced liveness detection to their
+                           products, with the confidence that it will work in even the 
+                           most challenging outdoor lighting conditions and can resist 
+                           the most sophisticated spoofing attacks.                                        
+                           Location: rt106f_smart_lock                                 
+                           Origin: NXP (https://github.com/NXP/mcu-viznlc)
+
+rt106f_bootloader          Name: rt106f_bootloader
+                           Version: 1.0.1
+                           Outgoing License: LA_OPT_NXP_Software_License
+                           License File: LICENSE.txt
+                           Format: source code                               
+                           Description: Startup application for rt106f_smart_lock.                                        
+                           Location: rt106f_bootloader                                 
+                           Origin: NXP
+
+k32w_ble                   Name: k32w-ble                                  
+                           Version: 1.0.0                                    
+                           Outgoing License: LA_OPT_NXP_Software_License
+                           License File: LICENSE.txt
+                           Format: source code                           
+                           Description: BLE access for the platform                                
+                           Location: k32w-ble                                 
+                           Origin: NXP  
+
+lpc845_low_power_control   Name: lpc845_low_power_control
+                           Version: 1.0.0                                
+                           Outgoing License: LA_OPT_NXP_Software_License
+                           License File: LICENSE.txt
+                           Format: source code                               
+                           Description: Manange to control low power
+                           Location: lpc845_low_power_control                                 
+                           Origin: NXP
+
+smartlockmanager           Name: smartlockmanager                                   
+                           Version: 1.0.0                                    
+                           Outgoing License: LA_OPT_NXP_Software_License
+                           License File: LICENSE.txt
+                           Format: source code & object code                         
+                           Description: Android application                               
+                           Location: smartlockmanager                                
+                           Origin: NXP
