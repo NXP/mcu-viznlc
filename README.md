@@ -16,3 +16,6 @@ This folder contains the source code of i.MX RT106F Bootloader MCUXpresso projec
 
 ## smartlockmanager
 This folder contains the source code of "Smart Lock Manager" Android Studio project.
+
+## prebuilt_bins
+This folder contains the prebuilt binaries, and they have been preinstalled into the MCUs.
