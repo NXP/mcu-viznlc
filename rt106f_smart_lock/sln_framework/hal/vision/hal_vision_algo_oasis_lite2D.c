@@ -256,8 +256,14 @@ static void _oasis_lite_EvtCb(ImageFrame_t *frames[], OASISLTEvt_t evt, OASISLTC
             else if (para->qualityResult == OASIS_QUALITY_RESULT_IR_FAKE)
             {
                 qualityCheck        = kOasisLiteQualityCheck_FakeFace;
-                debugInfo->is2dFake = 1;
-                OASIS_LOGD("[OASIS]Quality:2D liveness fail!");
+                debugInfo->irFake = 1;
+                OASIS_LOGD("[OASIS]Quality:2D IR liveness fail!");
+            }
+            else if (para->qualityResult == OASIS_QUALITY_RESULT_RGB_FAKE)
+            {
+                qualityCheck        = kOasisLiteQualityCheck_FakeFace;
+                debugInfo->rgbFake = 1;
+                OASIS_LOGD("[OASIS]Quality:2D RGB liveness fail!");
             }
             else if (para->qualityResult == OASIS_QUALITY_RESULT_FAIL_BRIGHTNESS_DARK ||
                      para->qualityResult == OASIS_QUALITY_RESULT_FAIL_BRIGHTNESS_OVEREXPOSURE)
@@ -506,30 +512,11 @@ static void _oasis_lite_AdjustBrightness(uint8_t frameIdx, uint8_t direction, vo
 {
     OASIS_LOGD("++_oasis_lite_AdjustBrightness");
 
-    if (frameIdx == OASISLT_INT_FRAME_IDX_IR)
-    {
-        event_common_t eventIRLed;
-        eventIRLed.brightnessControl.enable    = true;
-        eventIRLed.brightnessControl.direction = direction;
-        eventIRLed.eventBase.eventId           = kEventID_ControlIRLedBrightness;
-        _oasis_lite_dev_led_pwm_control(s_OasisLite.dev, &eventIRLed);
-    }
-    else
-    {
-#if !ENFORCE_FLEXIO_CAMERA_AS_IR
-        event_common_t eventWhiteLed;
-        eventWhiteLed.brightnessControl.enable    = true;
-        eventWhiteLed.brightnessControl.direction = direction;
-        eventWhiteLed.eventBase.eventId           = kEventID_ControlWhiteLedBrightness;
-        _oasis_lite_dev_led_pwm_control(s_OasisLite.dev, &eventWhiteLed);
-
-        event_common_t eventRGBCam;
-        eventRGBCam.brightnessControl.enable    = true;
-        eventRGBCam.brightnessControl.direction = direction;
-        eventRGBCam.eventBase.eventId           = kEventID_ControlRGBCamExposure;
-        _oasis_lite_dev_camera_exposure_control(s_OasisLite.dev, &eventRGBCam);
-#endif
-    }
+	event_common_t eventCam;
+	eventCam.brightnessControl.enable    = true;
+	eventCam.brightnessControl.direction = direction;
+	eventCam.eventBase.eventId           = (frameIdx == OASISLT_INT_FRAME_IDX_IR)?kEventID_ControlIRCamExposure:kEventID_ControlRGBCamExposure;
+	_oasis_lite_dev_camera_exposure_control(s_OasisLite.dev, &eventCam);
 
     OASIS_LOGD("--_oasis_lite_AdjustBrightness");
 }
@@ -873,6 +860,11 @@ static void _oasis_lite_reset_brightness(void)
     eventIRLed.eventBase.eventId        = kEventID_ControlIRLedBrightness;
     _oasis_lite_dev_led_pwm_control(s_OasisLite.dev, &eventIRLed);
 
+    event_common_t eventIRCam;
+    eventIRCam.brightnessControl.enable = false;
+    eventIRCam.eventBase.eventId        = kEventID_ControlIRCamExposure;
+    _oasis_lite_dev_camera_exposure_control(s_OasisLite.dev, &eventIRCam);
+
     event_common_t eventWhiteLed;
     eventWhiteLed.brightnessControl.enable = false;
     eventWhiteLed.eventBase.eventId        = kEventID_ControlWhiteLedBrightness;
@@ -976,7 +968,7 @@ static void _process_inference_result(oasis_lite_param_t *pParam)
 
     if (lockOasis)
     {
-        _oasis_lite_reset_brightness();
+        //_oasis_lite_reset_brightness();
 
         pParam->run_flag = OASIS_RUN_FLAG_NUM;
 
@@ -1080,9 +1072,9 @@ static hal_valgo_status_t HAL_VisionAlgoDev_OasisLite_Init(vision_algo_dev_t *de
     s_OasisLite.config.cbs.DeleteFace       = _oasis_lite_DeleteFace;
     s_OasisLite.config.cbs.reserved         = _oasis_lite_Log;
 #if HEADLESS_ENABLE
-    s_OasisLite.config.enableFlags = OASIS_ENABLE_MULTI_VIEW | OASIS_ENABLE_LIVENESS;
+    s_OasisLite.config.enableFlags = OASIS_ENABLE_MULTI_VIEW | OASIS_ENABLE_LIVENESS | OASIS_ENABLE_FACE_REC_BRIGHTNESS_CHECK;
 #else
-    s_OasisLite.config.enableFlags = OASIS_ENABLE_LIVENESS;
+    s_OasisLite.config.enableFlags = OASIS_ENABLE_LIVENESS; // | OASIS_ENABLE_FACE_REC_BRIGHTNESS_CHECK;
 #endif
     s_OasisLite.config.falseAcceptRate = OASIS_FAR_1_1000000;
     s_OasisLite.config.height          = OASIS_RGB_FRAME_HEIGHT;
@@ -1103,6 +1095,9 @@ static hal_valgo_status_t HAL_VisionAlgoDev_OasisLite_Init(vision_algo_dev_t *de
 
         s_OasisLite.config.runtimePara.recogTH = faceRecThreshold*1.0/1000;
     }
+
+    s_OasisLite.config.runtimePara.brightnessTH[0] = 80;
+    s_OasisLite.config.runtimePara.brightnessTH[1] = 190;
 
     oasisRet = OASISLT_init(&s_OasisLite.config);
 

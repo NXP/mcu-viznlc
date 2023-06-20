@@ -39,13 +39,12 @@
 #include "fsl_debug_console.h"
 #include "app_faceid.h"
 #include "fsl_power.h"
+#include "fsl_ctimer.h"
 
 #define RT_POWER_ON_DELAY_MS       100
 #define RT_POWER_ON_DURATION_MS    30000
-#define RT_POWER_OFF_RSP_WAIT_MS   2000
-#define RT_POWER_OFF_REQ_MAX_TIMES 5
+#define RT_POWER_OFF_RSP_WAIT_MS   5000
 
-#define WKT_CLK_FREQ   (CLOCK_GetFreq(kCLOCK_Fro) / 16)
 
 typedef enum
 {
@@ -53,8 +52,13 @@ typedef enum
     LPC_STATE_NORMAL_WORK,
     LPC_STATE_PRE_DEEP_POWER_DOWN,
     LPC_STATE_DEEP_POWER_DOWN,
-    LPC_STATE_WAKE_UP,
+
 } lpc_state_t;
+
+
+#define CTIMER          CTIMER0         /* Timer 0 */
+#define CTIMER_MAT0_OUT kCTIMER_Match_0 /* Match output 0 */
+#define CTIMER_CLK_FREQ CLOCK_GetFreq(kCLOCK_CoreSysClk)
 
 static volatile bool is_human_detected = false;
 static volatile bool is_wkt_alarmed    = false;
@@ -69,19 +73,71 @@ void pint_interrupt_callback(pint_pin_int_t pintr, uint32_t pmatch_status)
     }
 }
 
-void TIMER_WKT_IRQHANDLER(void)
+
+/*******************************************************************************
+ * Prototypes
+ ******************************************************************************/
+void ctimer_match0_callback(uint32_t flags);
+
+
+/* Array of function pointers for callback for each channel */
+ctimer_callback_t ctimer_callback_table[] = {
+    ctimer_match0_callback, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
+
+void ctimer_match0_callback(uint32_t flags)
 {
-    WKT_ClearStatusFlags(TIMER_PERIPHERAL, kWKT_AlarmFlag);
+
     is_wkt_alarmed = true;
+
 }
+
+void CTimer_init()
+{
+	ctimer_config_t config;
+	//CTimer code
+	CTIMER_GetDefaultConfig(&config);
+
+	CTIMER_Init(CTIMER, &config);
+
+	CTIMER_RegisterCallBack(CTIMER, &ctimer_callback_table[0], kCTIMER_SingleCallback);
+
+}
+
+
+void CTimer_start(uint32_t ms)
+{
+
+	ctimer_match_config_t matchConfig0;
+	/* Configuration 0 */
+	matchConfig0.enableCounterReset = true;
+	matchConfig0.enableCounterStop  = true;
+	//default timeout is 1 second
+	matchConfig0.matchValue         = CTIMER_CLK_FREQ/1000 * ms;
+	matchConfig0.outControl         = kCTIMER_Output_NoAction;
+	matchConfig0.outPinInitState    = false;
+	matchConfig0.enableInterrupt    = true;
+
+	//reset the counter
+//	CTIMER_StopTimer(CTIMER);
+	CTIMER_Reset(CTIMER);
+	CTIMER_SetupMatch(CTIMER, CTIMER_MAT0_OUT, &matchConfig0);
+	CTIMER_StartTimer(CTIMER);
+
+}
+
+
 
 int main(void)
 {
     /* Init board hardware. */
     BOARD_InitBootPins();
-    Board_DisableFaceIDUartTx();
+
     BOARD_InitBootClocks();
     BOARD_InitBootPeripherals();
+
+    //disable TX because if impact RT106F power up
+    Board_DisableFaceIDUartTx();
 #ifndef BOARD_INIT_DEBUG_CONSOLE_PERIPHERAL
     /* Init FSL debug console. */
     BOARD_InitDebugConsole();
@@ -93,28 +149,31 @@ int main(void)
     PRINTF("~~~~~~~~~~~~~~~~~~~~~~~~\r\n");
     PRINTF("\r\n");
 
+    CTimer_init();
+
+//    lpc_state_t lpc_state  = LPC_STATE_POWER_ON;
+
     while (1)
     {
         switch (lpc_state)
         {
             case LPC_STATE_POWER_ON:
-            case LPC_STATE_WAKE_UP:
             {
                 PRINTF("@@@ FACEID Power On\r\n");
+
                 APP_FACEID_Init();
                 is_human_detected = false;
                 is_wkt_alarmed = false;
-                WKT_StartTimer(TIMER_PERIPHERAL, MSEC_TO_COUNT(RT_POWER_ON_DELAY_MS, WKT_CLK_FREQ));
+                CTimer_start(RT_POWER_ON_DELAY_MS);
+                while(!is_wkt_alarmed);
                 lpc_state = LPC_STATE_NORMAL_WORK;
                 break;
             }
             case LPC_STATE_NORMAL_WORK:
             {
-                if (is_wkt_alarmed)
-                {
                     PRINTF("@@@ FACEID is ready after %d ms delay\r\n", RT_POWER_ON_DELAY_MS);
                     is_wkt_alarmed = false;
-                    WKT_StartTimer(TIMER_PERIPHERAL, MSEC_TO_COUNT(RT_POWER_ON_DURATION_MS, WKT_CLK_FREQ));
+                    CTimer_start(RT_POWER_ON_DURATION_MS);
                     PRINTF("@@@ Start %d ms timer for face rec\r\n", RT_POWER_ON_DURATION_MS);
                     while (!is_wkt_alarmed)
                     {
@@ -123,67 +182,45 @@ int main(void)
                             break;
                         }else if (is_human_detected)
                         {
-                        	WKT_StopTimer(TIMER_PERIPHERAL);
+                        	CTIMER_StopTimer(CTIMER);
                         	is_wkt_alarmed = false;
                         	is_human_detected = false;
-                        	WKT_StartTimer(TIMER_PERIPHERAL, MSEC_TO_COUNT(RT_POWER_ON_DURATION_MS, WKT_CLK_FREQ));
+                        	CTimer_start(RT_POWER_ON_DURATION_MS);
                         }
                     }
 
                     lpc_state      = LPC_STATE_PRE_DEEP_POWER_DOWN;
-
-                }
                 break;
             }
             case LPC_STATE_PRE_DEEP_POWER_DOWN:
             {
-            	bool enter_sleep = false;
-            	int prePwdCount = RT_POWER_OFF_REQ_MAX_TIMES;
-                uint8_t ret;
+
+                //send power off request
+                Board_EnableFaceIDUartTx();
+                APP_FACEID_RequestPowerOff();
+                Board_DisableFaceIDUartTx();
+
+				is_wkt_alarmed = false;
+				CTIMER_StopTimer(CTIMER);
+				CTimer_start(RT_POWER_OFF_RSP_WAIT_MS);
+
 
             	do{
-                    is_wkt_alarmed = false;
-                    WKT_StartTimer(TIMER_PERIPHERAL, MSEC_TO_COUNT(RT_POWER_OFF_RSP_WAIT_MS, WKT_CLK_FREQ));
-                    Board_EnableFaceIDUartTx();
-                    APP_FACEID_RequestPowerOff();
-                    Board_DisableFaceIDUartTx();
 
-                    //in fact, if the response is not received immediately, this function always return FACEIDUNVALIDE
-                    //give some time for response receiving
-                    while(!is_wkt_alarmed)
-                    {}
-
-					ret = APP_FACEID_Task();
-					if (ret == FACEIDPWROFFACK)
-					{
-						enter_sleep = true;
-						break;
-					}
-					else if (ret == FACEIDPWROFFNACK)
-					{
-
-						prePwdCount = RT_POWER_OFF_REQ_MAX_TIMES;
-
-					}else
-					{
-						prePwdCount--;
-						if (prePwdCount == 0)
+            			//loop the response from
+						uint8_t ret = APP_FACEID_Task();
+						if (ret == FACEIDPWROFFACK)
 						{
-							enter_sleep = true;
 							break;
 						}
-					}
+						else
+						{
+							//for other cases, do nothing
+						}
 
+            	}while(!is_wkt_alarmed);
 
-            	}while(true);
-
-            	if (enter_sleep)
-            	{
-            		lpc_state = LPC_STATE_DEEP_POWER_DOWN;
-            	}else
-            	{
-            		lpc_state = LPC_STATE_NORMAL_WORK;
-            	}
+           		lpc_state = LPC_STATE_DEEP_POWER_DOWN;
             	break;
 
 
@@ -194,14 +231,23 @@ int main(void)
                 /* power off FACEID */
                 APP_FACEID_Deinit();
 
-                PRINTF("LPC enters into deep down power mode.\r\n");
-                /* prepare to enter low power mode */
-                Board_PreEnterLowPower();
-                /* Enter deep power down mode. */
-                POWER_EnterDeepPowerDownMode();
-                /* Restore the active mode configurations */
-                Board_LowPowerWakeup();
-                lpc_state = LPC_STATE_WAKE_UP;
+                if (is_human_detected)
+                {
+                	is_human_detected = false;
+
+                }else
+                {
+
+					PRINTF("LPC enters into deep down power mode.\r\n");
+					/* prepare to enter low power mode */
+					Board_PreEnterLowPower();
+					/* Enter deep power down mode. */
+					POWER_EnterDeepPowerDownMode();
+					/* Restore the active mode configurations */
+					Board_LowPowerWakeup();
+                }
+
+                lpc_state = LPC_STATE_POWER_ON;
                 break;
             }
             default:

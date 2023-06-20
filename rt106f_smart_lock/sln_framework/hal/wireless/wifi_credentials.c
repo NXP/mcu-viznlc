@@ -17,7 +17,7 @@
 static wifi_info_t s_wifiInfo;
 static wifi_cred_t *s_wifiCredRef;
 
-#define ENCRYPTED_CREDENTIALS 1
+#define ENCRYPTED_CREDENTIALS 0
 
 #define WIFI_INFO_DIR "wifi_info"
 

@@ -1226,7 +1226,7 @@ int HAL_InputDev_WiFiAWAM510_Register(void)
 int HAL_WiFiAWAM510_Register()
 {
     int error = 0;
-
+    LOGD("HAL_WiFiAWAM510_Register");
     error = HAL_InputDev_WiFiAWAM510_Register();
     error += HAL_OutputDev_WiFiAWAM510_Register();
 

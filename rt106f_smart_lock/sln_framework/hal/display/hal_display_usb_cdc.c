@@ -33,6 +33,7 @@
  * Definitions
  ******************************************************************************/
 #define DISPLAY_NAME                        "diplay usb cdc"
+#define DISPLAY_NAME2                       "diplay2 usb cdc"
 #define DISPLAY_3D_IR_FRAME_WIDTH           540
 #define DISPLAY_3D_IR_FRAME_HEIGHT          640
 #define DISPLAY_3D_IR_FRAME_BYTES_PER_PIXEL 3
@@ -49,7 +50,11 @@
 #define DISPLAY_2D_IR_FRAME_HEIGHT          640
 #define DISPLAY_2D_IR_FRAME_BYTES_PER_PIXEL 3
 
-#define DISPLAY_MAX_FRAME_WIDTH           540
+#define DISPLAY_1D_FRAME_WIDTH           480
+#define DISPLAY_1D_FRAME_HEIGHT          640
+#define DISPLAY_1D_FRAME_BYTES_PER_PIXEL 3
+
+#define DISPLAY_MAX_FRAME_WIDTH           480
 #define DISPLAY_MAX_FRAME_HEIGHT          640
 #define DISPLAY_MAX_FRAME_BYTES_PER_PIXEL 3
 #define DISPLAY_FRAME_BUFFER_COUNT        2
@@ -87,8 +92,11 @@ static usb_cdc_acm_info_t s_usbCdcAcmInfo = {
 USB_DMA_NONINIT_DATA_ALIGN(USB_DATA_ALIGN_SIZE) static uint8_t s_currRecvBuf[DATA_BUFF_SIZE];
 USB_DMA_NONINIT_DATA_ALIGN(USB_DATA_ALIGN_SIZE) static uint8_t s_htUnit[14];
 
-extern usb_device_endpoint_struct_t g_cdcVcomDicEndpoints[];
-extern usb_device_endpoint_struct_t g_cdcVcomCicEndpoints[];
+//extern usb_device_endpoint_struct_t g_cdcVcomDicEndpoints[];
+//extern usb_device_endpoint_struct_t g_cdcVcomCicEndpoints[];
+extern usb_device_endpoint_struct_t g_cdcVcomDicEndpoints_2[];
+extern usb_device_endpoint_struct_t g_cdcVcomCicEndpoints_2[];
+
 extern usb_device_class_struct_t g_UsbDeviceCdcVcomConfig[];
 
 /*******************************************************************************
@@ -110,6 +118,7 @@ static hal_display_status_t HAL_DisplayDev_UsbCdc_Blit(const display_dev_t *dev,
  * Variables
  ******************************************************************************/
 static serial_usb_cdc_state_t s_UsbDeviceCDC;
+static uint8_t s_DisplayDevCount= 0;
 
 AT_NONCACHEABLE_SECTION_ALIGN(
     static uint8_t s_FrameBuffer[DISPLAY_FRAME_BUFFER_COUNT][DISPLAY_MAX_FRAME_HEIGHT * DISPLAY_MAX_FRAME_WIDTH *
@@ -314,7 +323,7 @@ static usb_status_t USB_DeviceCdcVcomCallback(class_handle_t handle, uint32_t ev
                 if (1 == s_UsbDeviceCDC.attach)
                 {
                     s_UsbDeviceCDC.startTransactions = 1;
-                    for (int i = 0; i < 2; i++)
+                    for (int i = 0; i < s_DisplayDevCount; i++)
                     {
                         if ((s_pDisplayDevUSBCDC != NULL) && (s_pDisplayDevUSBCDC[i].cap.callback != NULL))
                         {
@@ -358,14 +367,14 @@ static usb_status_t USB_DeviceCdcVcomSetConfigure(class_handle_t handle, uint8_t
         /*endpoint information for cdc 1*/
         s_UsbDeviceCDC.attach = 1;
 
-        s_UsbDeviceCDC.interruptEndpoint              = USB_CDC_VCOM_CIC_INTERRUPT_IN_ENDPOINT;
-        s_UsbDeviceCDC.interruptEndpointMaxPacketSize = g_cdcVcomCicEndpoints[0].maxPacketSize;
+        s_UsbDeviceCDC.interruptEndpoint              = USB_CDC_VCOM_CIC_INTERRUPT_IN_ENDPOINT_2;
+        s_UsbDeviceCDC.interruptEndpointMaxPacketSize = g_cdcVcomCicEndpoints_2[0].maxPacketSize;
 
-        s_UsbDeviceCDC.bulkInEndpoint              = USB_CDC_VCOM_DIC_BULK_IN_ENDPOINT;
-        s_UsbDeviceCDC.bulkInEndpointMaxPacketSize = g_cdcVcomDicEndpoints[0].maxPacketSize;
+        s_UsbDeviceCDC.bulkInEndpoint              = USB_CDC_VCOM_DIC_BULK_IN_ENDPOINT_2;
+        s_UsbDeviceCDC.bulkInEndpointMaxPacketSize = g_cdcVcomDicEndpoints_2[0].maxPacketSize;
 
-        s_UsbDeviceCDC.bulkOutEndpoint              = USB_CDC_VCOM_DIC_BULK_OUT_ENDPOINT;
-        s_UsbDeviceCDC.bulkOutEndpointMaxPacketSize = g_cdcVcomDicEndpoints[1].maxPacketSize;
+        s_UsbDeviceCDC.bulkOutEndpoint              = USB_CDC_VCOM_DIC_BULK_OUT_ENDPOINT_2;
+        s_UsbDeviceCDC.bulkOutEndpointMaxPacketSize = g_cdcVcomDicEndpoints_2[1].maxPacketSize;
 
         /* Schedule buffer for receive */
         USB_DeviceCdcAcmRecv(s_UsbDeviceCDC.cdcAcmHandle, s_UsbDeviceCDC.bulkOutEndpoint, s_currRecvBuf,
@@ -499,6 +508,14 @@ const static display_dev_operator_t s_DisplayDev_USBCDC2DOps[2] = {{
                                                                        .inputNotify = NULL,
                                                                    }};
 
+const static display_dev_operator_t s_DisplayDev_USBCDC1DOps   = {
+                                                                       .init        = HAL_DisplayDev_UsbCdc_Init,
+                                                                       .deinit      = HAL_DisplayDev_UsbCdc_DeInit,
+                                                                       .start       = HAL_DisplayDev_UsbCdc_Start,
+                                                                       .blit        = HAL_DisplayDev_UsbCdc_Blit,
+                                                                       .inputNotify = NULL,
+                                                                  };
+
 static display_dev_t s_DisplayDev_USBCDC3D[2] = {
     {.id   = 0,
      .name = DISPLAY_NAME,
@@ -552,7 +569,7 @@ static display_dev_t s_DisplayDev_USBCDC2D[2] = {
              .callback    = NULL,
              .param       = NULL}},
     {.id   = 1,
-     .name = DISPLAY_NAME,
+     .name = DISPLAY_NAME2,
      .ops  = &s_DisplayDev_USBCDC2DOps[1],
      .cap  = {.width       = DISPLAY_2D_RGB_FRAME_WIDTH,
              .height      = DISPLAY_2D_RGB_FRAME_HEIGHT,
@@ -567,6 +584,25 @@ static display_dev_t s_DisplayDev_USBCDC2D[2] = {
              .frameBuffer = (void *)&s_FrameBuffer[1],
              .callback    = NULL,
              .param       = NULL}},
+};
+
+static display_dev_t s_DisplayDev_USBCDC1D = {
+     .id   = 0,
+     .name = DISPLAY_NAME,
+     .ops  = &s_DisplayDev_USBCDC1DOps,
+     .cap  = {.width       = DISPLAY_1D_FRAME_WIDTH,
+             .height      = DISPLAY_1D_FRAME_HEIGHT,
+             .pitch       = DISPLAY_1D_FRAME_WIDTH * DISPLAY_1D_FRAME_BYTES_PER_PIXEL,
+             .left        = 0,
+             .top         = 0,
+             .right       = DISPLAY_1D_FRAME_WIDTH - 1,
+             .bottom      = DISPLAY_1D_FRAME_HEIGHT - 1,
+             .rotate      = kCWRotateDegree_0,
+             .format      = kPixelFormat_BGR,
+             .srcFormat   = kPixelFormat_UYVY1P422_Gray,
+             .frameBuffer = (void *)&s_FrameBuffer[0],
+             .callback    = NULL,
+             .param       = NULL}
 };
 
 static const uint8_t TU_MAGIC[] = {0x53, 0x79, 0x4c};
@@ -640,7 +676,7 @@ static hal_display_status_t HAL_DisplayDev_UsbCdc_Blit(const display_dev_t *dev,
     usb_status_t error       = kStatus_USB_Error;
     uint32_t size            = (dev->cap.height * dev->cap.pitch);
 
-    LOGD("HAL_DisplayDev_UsbCdc_Blit dev name %s.", dev->name);
+    LOGD("+++HAL_DisplayDev_UsbCdc_Blit dev name %s.", dev->name);
     if (s_UsbDeviceCDC.startTransactions == 0)
     {
         return kStatus_HAL_DisplayTxBusy;
@@ -680,7 +716,7 @@ static hal_display_status_t HAL_DisplayDev_UsbCdc_Blit(const display_dev_t *dev,
             break;
         }
     }
-
+    LOGD("----HAL_DisplayDev_UsbCdc_Blit.");
     return ret;
 }
 
@@ -689,8 +725,8 @@ int HAL_DisplayDev_UsbCdc3D_Register()
     int error = 0;
     LOGD("HAL_DisplayDev_UsbCdc3D_Register");
     s_UsbDeviceCDC.cdcAcmHandle = NULL;
-    USB_RegisterCDC();
-    USB_CompositeClassRegister(USB_DeviceCallback, USB_DeviceCdcVcomCallback, &g_UsbDeviceCdcVcomConfig[0]);
+    USB_RegisterCDC2();
+    USB_CompositeClassRegister(USB_DeviceCallback, USB_DeviceCdcVcomCallback, &g_UsbDeviceCdcVcomConfig[1]);
 
     error = FWK_DisplayManager_DeviceRegister(&s_DisplayDev_USBCDC3D[0]);
     if (error == 0)
@@ -706,8 +742,8 @@ int HAL_DisplayDev_UsbCdc2D_Register()
     int error = 0;
     LOGD("HAL_DisplayDev_UsbCdc2D_Register");
     s_UsbDeviceCDC.cdcAcmHandle = NULL;
-    USB_RegisterCDC();
-    USB_CompositeClassRegister(USB_DeviceCallback, USB_DeviceCdcVcomCallback, &g_UsbDeviceCdcVcomConfig[0]);
+    USB_RegisterCDC2();
+    USB_CompositeClassRegister(USB_DeviceCallback, USB_DeviceCdcVcomCallback, &g_UsbDeviceCdcVcomConfig[1]);
 
     error = FWK_DisplayManager_DeviceRegister(&s_DisplayDev_USBCDC2D[0]);
     if (error == 0)
@@ -717,4 +753,41 @@ int HAL_DisplayDev_UsbCdc2D_Register()
     s_pDisplayDevUSBCDC = &s_DisplayDev_USBCDC2D[0];
     return error;
 }
+
+int HAL_DisplayDev_UsbCdc1D_Register()
+{
+    int error = 0;
+    LOGD("HAL_DisplayDev_UsbCdc1D_Register");
+    s_UsbDeviceCDC.cdcAcmHandle = NULL;
+    USB_RegisterCDC2();
+    USB_CompositeClassRegister(USB_DeviceCallback, USB_DeviceCdcVcomCallback, &g_UsbDeviceCdcVcomConfig[1]);
+
+    error = FWK_DisplayManager_DeviceRegister(&s_DisplayDev_USBCDC1D);
+    s_pDisplayDevUSBCDC = &s_DisplayDev_USBCDC1D;
+    return error;
+}
+
+//#define ENABLE_DISPLAY_USB_CDC_1D
+#define ENABLE_DISPLAY_USB_CDC_2D
+//#define ENABLE_DISPLAY_USB_CDC_3D
+
+int HAL_DisplayDev_UsbCdc_Register()
+{
+    int error = 0;
+#ifdef ENABLE_DISPLAY_USB_CDC_1D
+    error = HAL_DisplayDev_UsbCdc1D_Register();
+    s_DisplayDevCount = 1;
+#endif
+#ifdef ENABLE_DISPLAY_USB_CDC_2D
+    error = HAL_DisplayDev_UsbCdc2D_Register();
+    s_DisplayDevCount = 2;
+#endif
+#ifdef ENABLE_DISPLAY_USB_CDC_3D
+    error = HAL_DisplayDev_UsbCdc3D_Register();
+    s_DisplayDevCount = 2;
+#endif
+
+    return error;
+}
+
 #endif /* ENABLE_DISPLAY_DEV_UsbCdc2D */

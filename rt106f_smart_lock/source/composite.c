@@ -274,7 +274,6 @@ usb_status_t USB_DeviceCallback(usb_device_handle handle, uint32_t event, void *
  */
 int USB_DeviceApplicationInit(void)
 {
-    USB_DeviceClockInit();
 #if (defined(FSL_FEATURE_SOC_SYSMPU_COUNT) && (FSL_FEATURE_SOC_SYSMPU_COUNT > 0U))
     SYSMPU_Enable(SYSMPU, 0);
 #endif /* FSL_FEATURE_SOC_SYSMPU_COUNT */
@@ -282,6 +281,7 @@ int USB_DeviceApplicationInit(void)
     if (s_USBinited == false)
     {
         s_USBinited = true;
+        USB_DeviceClockInit();
     }
     else
     {

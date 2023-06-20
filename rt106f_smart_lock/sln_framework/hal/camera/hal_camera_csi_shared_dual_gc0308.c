@@ -175,7 +175,7 @@ static hal_camera_status_t HAL_CameraDev_CsiSharedDualGC0308_Init(camera_dev_t *
     cameraConfig.frameBufferLinePitch_Bytes = width * CAMERA_BYTE_PER_PIXEL;
     cameraConfig.interface                  = kCAMERA_InterfaceGatedClock;
     cameraConfig.controlFlags               = CAMERA_RGB_CONTROL_FLAGS;
-    cameraConfig.framePerSec                = 30;
+    cameraConfig.framePerSec                = 20;
 
     BOARD_InitCSICameraResource();
 
@@ -308,28 +308,50 @@ static hal_camera_status_t HAL_CameraDev_CsiSharedDualGC0308_InputNotify(const c
     event_base_t eventBase = *(event_base_t *)data;
     switch (eventBase.eventId)
     {
-        case kEventID_ControlRGBCamExposure:
-        {
-            if (s_CurrentRunningCamera == CAMERA_RGB)
-            {
-                event_common_t event = *(event_common_t *)data;
-                uint8_t mode;
-                if (event.brightnessControl.enable == true)
-                {
-                    mode = _HAL_CameraDev_GetTargetExposureMode(s_CurRGBExposureMode, event.brightnessControl.direction);
-                }
-                else
-                {
-                    mode = CAMERA_EXPOSURE_MODE_AUTO_LEVEL0;
-                }
-                if (mode != s_CurRGBExposureMode)
-                {
-                    CAMERA_DEVICE_Control(&cameraDevice[CAMERA_RGB], kCAMERA_DeviceExposureMode, (int32_t)mode);
-                    s_CurRGBExposureMode = mode;
-                }
-            }
-        }
-        break;
+//        case kEventID_ControlRGBCamExposure:
+//        {
+//            if (s_CurrentRunningCamera == CAMERA_RGB)
+//            {
+//                event_common_t event = *(event_common_t *)data;
+//                uint8_t mode;
+//                if (event.brightnessControl.enable == true)
+//                {
+//                    mode = _HAL_CameraDev_GetTargetExposureMode(s_CurRGBExposureMode, event.brightnessControl.direction);
+//                }
+//                else
+//                {
+//                    mode = CAMERA_EXPOSURE_MODE_AUTO_LEVEL0;
+//                }
+//                if (mode != s_CurRGBExposureMode)
+//                {
+//                    CAMERA_DEVICE_Control(&cameraDevice[CAMERA_RGB], kCAMERA_DeviceExposureMode, (int32_t)mode);
+//                    s_CurRGBExposureMode = mode;
+//                }
+//            }
+//        }
+//        break;
+		case kEventID_ControlRGBCamExposure:
+		case kEventID_ControlIRCamExposure:
+		{
+			event_common_t* pevent = (event_common_t *)data;
+			csi_shared_dual_camera_id cur_camera_id = (eventBase.eventId == kEventID_ControlRGBCamExposure)?CAMERA_RGB:CAMERA_IR;
+//			if (cur_camera_id == s_CurrentRunningCamera)
+			{
+
+				if (pevent->brightnessControl.enable)
+				{
+					CAMERA_DEVICE_Control(&cameraDevice[cur_camera_id],
+							kCAMERA_DeviceBrightnessAdjust,
+							(pevent->brightnessControl.direction == 0)?CAMERA_BRIGHTNESS_DECREASE:CAMERA_BRIGHTNESS_INCREASE);
+				}
+				else
+				{
+					//CAMERA_DEVICE_Control(&cameraDevice[cur_camera_id], kCAMERA_DeviceBrightnessAdjust, CAMERA_BRIGHTNESS_DEFAULT);
+					CAMERA_DEVICE_Control(&cameraDevice[cur_camera_id], kCAMERA_DeviceExposureMode, CAMERA_EXPOSURE_MODE_AUTO);
+				}
+			}
+		}
+		break;
         default:
             break;
     }

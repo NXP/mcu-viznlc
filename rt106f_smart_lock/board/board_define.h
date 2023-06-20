@@ -31,6 +31,7 @@
 #define ENABLE_GFX_DEV_Pxp
 #define ENABLE_DISPLAY_DEV_LcdifRk024hh298
 #define ENABLE_DISPLAY_DEV_UsbUvc
+//#define ENABLE_DISPLAY_DEV_UsbCdc2D
 #define ENABLE_CSI_SHARED_DUAL_CAMERA
 #define ENABLE_FLASH_DEV_Littlefs
 #define ENABLE_VISIONALGO_DEV_OasisLite2D
@@ -45,7 +46,34 @@
 #define ENABLE_INPUT_DEV_ShellUsb
 #define ENABLE_LPM_DEV_Standby
 #define ENABLE_INPUT_DEV_Lpc845uart
+//#define ENABLE_INPUT_DEV_WiFiAWAM510
 
+
+//wifi board
+#define WIFI_IW416_BOARD_MURATA_1XK_M2
+/* Murata 1XK */
+#if defined(WIFI_IW416_BOARD_MURATA_1XK_M2)
+#ifdef ENABLE_INPUT_DEV_WiFiAWAM510
+#define WIFI_ENABLED 1
+#else
+#define WIFI_ENABLED 0
+#endif
+#define ENABLE_WIFI_CREDENTIALS
+// #define WIFI_BT_TX_PWR_LIMITS "wlan_txpwrlimit_cfg_murata_1XK_CA.h"
+// #define WIFI_BT_TX_PWR_LIMITS "wlan_txpwrlimit_cfg_murata_1XK_EU.h"
+// #define WIFI_BT_TX_PWR_LIMITS "wlan_txpwrlimit_cfg_murata_1XK_JP.h"
+// #define WIFI_BT_TX_PWR_LIMITS "wlan_txpwrlimit_cfg_murata_1XK_US.h"
+#define WIFI_BT_TX_PWR_LIMITS "wlan_txpwrlimit_cfg_murata_1XK_WW.h"
+#define SD8978
+#define SDMMCHOST_OPERATION_VOLTAGE_3V3
+#define SD_TIMING_MAX kSD_TimingSDR25HighSpeedMode
+#define WIFI_BT_USE_M2_INTERFACE
+#define WLAN_ED_MAC_CTRL                                                               \
+    {                                                                                  \
+        .ed_ctrl_2g = 0x1, .ed_offset_2g = 0x0, .ed_ctrl_5g = 0x1, .ed_offset_5g = 0x6 \
+    }
+#include "wifi_config.h"
+#endif /* WIFI_IW416_BOARD_MURATA_1XK_M2 */
 
 /* Memory regions definitions */
 #define AT_NONCACHEABLE_SECTION_ALIGN_DTC(var, alignbytes) \

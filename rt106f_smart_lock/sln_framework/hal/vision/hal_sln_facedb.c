@@ -64,7 +64,7 @@ typedef struct _facedb_metadata
 {
     uint32_t featureVersion;
     uint32_t modelVersion;
-    uint8_t numberFaces;
+    uint16_t numberFaces;
     uint16_t faceEntrySize;
     /* RESERVED DATA for future updates */
     uint8_t reservedData[RESERVED_DATA];
@@ -159,7 +159,7 @@ static void _Facedb_GeneratePathFromIndex(uint16_t id, char *path)
 {
     if (path != NULL)
     {
-        char index[4];
+        char index[8];
         itoa(id, index, 10);
         strcpy(path, OASIS_FACEDATABASE);
         strcat(path, index);
@@ -1025,7 +1025,7 @@ facedb_status_t HAL_Facedb_UpdateFace(uint16_t id, char *name, void *face, int s
 facedb_status_t HAL_Facedb_GetIds(uint16_t *face_ids)
 {
     facedb_status_t ret = kFaceDBStatus_Success;
-    uint8_t index       = 0;
+    uint16_t index       = 0;
 
     if ((s_FaceDB == NULL) || (s_FaceDBLock == NULL))
     {

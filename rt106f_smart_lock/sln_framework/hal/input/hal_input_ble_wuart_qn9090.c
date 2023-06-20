@@ -714,7 +714,14 @@ static hal_ble_wuart_status_t SLN_BLEWUARTParseData(uint8_t *dataBuf, hal_header
 
         case GET_APP_TYPE_REQ:
         {
-            SLN_BLEWUARTSendPacket(NULL, 0, GET_APP_TYPE_RES, pHtUnit->pktId, HAL_OutputDev_SmartLockConfig_GetMode());
+            uint32_t type;
+#if defined(SMART_LOCK_2D) || defined(SMART_LOCK_3D)
+            type = 0;
+#else
+            type = 1;
+#endif
+            SLN_BLEWUARTSendPacket(NULL, 0, GET_APP_TYPE_RES, pHtUnit->pktId, type);
+          //SLN_BLEWUARTSendPacket(NULL, 0, GET_APP_TYPE_RES, pHtUnit->pktId, HAL_OutputDev_SmartLockConfig_GetMode());
         }
         break;
 

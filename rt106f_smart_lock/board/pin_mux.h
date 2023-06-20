@@ -22,6 +22,7 @@
 #define BOARD_INITLCDPINS_IOMUXC_GPR_GPR26_GPIO_MUX1_GPIO_SEL_MASK 0x8000U /*!< GPIO1 and GPIO6 share same IO MUX function, GPIO_MUX1 selects one GPIO function: affected bits mask */
 #define BOARD_INITLCDPINS_IOMUXC_GPR_GPR27_GPIO_MUX2_GPIO_SEL_MASK 0x08D00000U /*!< GPIO2 and GPIO7 share same IO MUX function, GPIO_MUX2 selects one GPIO function: affected bits mask */
 #define BOARD_INITBUTPINS_IOMUXC_GPR_GPR28_GPIO_MUX3_GPIO_SEL_MASK 0x0CU /*!< GPIO3 and GPIO8 share same IO MUX function, GPIO_MUX3 selects one GPIO function: affected bits mask */
+#define BOARD_INITWIFIPINS_IOMUXC_GPR_GPR28_GPIO_MUX3_GPIO_SEL_MASK 0x03U /*!< GPIO3 and GPIO8 share same IO MUX function, GPIO_MUX3 selects one GPIO function: affected bits mask */
 
 
 /*! @brief Direction type  */
@@ -105,6 +106,23 @@ void BOARD_InitLedPins(void);
 void BOARD_InitButtonPins(void);
 void BOARD_InitBLEResetPin(void);
 void BOARD_InitMQSPins(void);
+void BOARD_InitWiFiPins(void);
+
+/* GPIO_AD_B1_03 (coord M12), WL_RST */
+/* Routed pin properties */
+#define BOARD_INITWIFIPIN_WL_RST_PERIPHERAL                                 GPIO3   /*!< Peripheral name */
+#define BOARD_INITWIFIPIN_WL_RST_SIGNAL                                   gpio_io   /*!< Signal name */
+#define BOARD_INITWIFIPIN_WL_RST_CHANNEL                                      0U   /*!< Signal channel */
+
+/* Symbols to be used with GPIO driver */
+#define BOARD_INITWIFIPIN_WL_RST_GPIO                                       GPIO3   /*!< GPIO peripheral base pointer */
+#define BOARD_INITWIFIPIN_WL_RST_GPIO_PIN                                     0U   /*!< GPIO pin number */
+#define BOARD_INITWIFIPIN_WL_RST_GPIO_PIN_MASK                        (1U << 0U)   /*!< GPIO pin mask */
+#define BOARD_INITWIFIPIN_WL_RST_PORT                                       GPIO3   /*!< PORT peripheral base pointer */
+#define BOARD_INITWIFIPIN_WL_RST_PIN                                          0U   /*!< PORT pin number */
+#define BOARD_INITWIFIPIN_WL_RST_PIN_MASK                             (1U << 0U)   /*!< PORT pin mask */
+
+
 #if defined(__cplusplus)
 }
 #endif
