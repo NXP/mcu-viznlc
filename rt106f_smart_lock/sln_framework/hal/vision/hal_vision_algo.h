@@ -142,8 +142,16 @@ typedef struct _oasis_lite_debug
     uint8_t isSmallFace;
     uint8_t isBlurry;
     uint8_t isSideFace;
-    uint8_t is2dFake;
-    uint8_t is3dFake;
+    union
+    {
+        uint8_t is2dFake;
+        uint8_t rgbFake;
+    };
+    union
+    {
+        uint8_t is3dFake;
+        uint8_t irFake;
+    };
     uint8_t hasMask;
     uint8_t hasGlasses;
     uint8_t irBrightness;

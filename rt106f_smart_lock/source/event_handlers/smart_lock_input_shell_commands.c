@@ -50,6 +50,10 @@ static shell_status_t _WhitePwmCommand(shell_handle_t shellContextHandle, int32_
 static shell_status_t _IrPwmCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv);
 static shell_status_t _SpeakerVolumeCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv);
 static shell_status_t _LpmTriggerCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv);
+#if defined(WIFI_ENABLED) && (WIFI_ENABLED == 1)
+static shell_status_t _WiFiCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv);
+#endif
+static shell_status_t _BleAddressCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv);
 static shell_status_t _GetManagerCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv);
 static shell_status_t _ListCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv);
 static shell_status_t _RenameCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv);
@@ -117,6 +121,27 @@ static SHELL_COMMAND_DEFINE(
             "or disable.\r\n"
             "\"lpm\": Return the current low status <enable | disable>\r\n",
     _LpmTriggerCommand, SHELL_IGNORE_PARAMETER_COUNT);
+static SHELL_COMMAND_DEFINE(ble,
+                            (char *)"\r\n\"ble address\": get ble advertising address.\r\n",
+                            _BleAddressCommand,
+                            SHELL_IGNORE_PARAMETER_COUNT);
+#if defined(WIFI_ENABLED) && (WIFI_ENABLED == 1)
+static SHELL_COMMAND_DEFINE(wifi,
+                            (char *)"\r\n\"wifi ssid <SSID>\": Set the SSID\r\n"
+                                    "\"wifi password <Password>\": Set the Password\r\n"
+                                    "\"wifi ip \": Get the IP\r\n"
+                                    "\"wifi credentials\": get the current WiFi credentials saved in flash.\r\n"
+                                    "\"wifi credentials erase\": Remove the current WiFi credentials from flash. After erasing the credentials,"
+                                    "WiFi will disconnect from the network.\r\n"
+                                    "\"wifi state <on/off>\": Turn on and off the WiFi.\r\n"
+                                    "\"wifi state\": Get current state of the WiFi.\r\n"
+                                    "\"wifi reset\": Reset the WiFi connection.\r\n"
+                                    "\"wifi scan\": Start the scan process. This will return a json list with"
+                            "<SSID><signal><channel> after the scan is completed.\r\n"
+                            ,
+                            _WiFiCommand,
+                            SHELL_IGNORE_PARAMETER_COUNT);
+#endif
 static SHELL_COMMAND_DEFINE(
     list,
     (char *)"\r\n\"list\": get all users registered.\r\n"
@@ -186,6 +211,10 @@ void APP_InputDev_Shell_RegisterShellCommands(shell_handle_t shellContextHandle,
     SHELL_RegisterCommand(shellContextHandle, SHELL_COMMAND(white_pwm));
     SHELL_RegisterCommand(shellContextHandle, SHELL_COMMAND(volume));
 //    SHELL_RegisterCommand(shellContextHandle, SHELL_COMMAND(lpm));
+#if defined(WIFI_ENABLED) && (WIFI_ENABLED == 1)
+    SHELL_RegisterCommand(shellContextHandle, SHELL_COMMAND(wifi));
+#endif /* ENABLE_WIFI */
+    SHELL_RegisterCommand(shellContextHandle, SHELL_COMMAND(ble));
 //    SHELL_RegisterCommand(shellContextHandle, SHELL_COMMAND(get_manager));
 //    SHELL_RegisterCommand(shellContextHandle, SHELL_COMMAND(rtinfo));
     SHELL_RegisterCommand(shellContextHandle, SHELL_COMMAND(oasis));
@@ -471,6 +500,175 @@ static int _HalEventsHandler(uint32_t event_id, void *response, event_status_t s
             }
         }
         break;
+#if defined(WIFI_ENABLED) && (WIFI_ENABLED == 1)
+        case kEventID_WiFiEraseCredentials:
+        {
+            if (status == kEventStatus_Ok)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nWiFi Credentials erased.");
+            }
+            else
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nWiFi Credentials erased failed.");
+            }
+        }
+        break;
+        case kEventID_WiFiSetCredentials:
+        {
+            if (status == kEventStatus_Ok)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nWiFi Credentials set with success.");
+            }
+            else
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nWiFi Credentials set failed.");
+            }
+        }
+        break;
+        case kEventID_WiFiGetCredentials:
+        {
+            wifi_cred_t wifiCred = ((wifi_event_t *)response)->wifiCred;
+            if (status == kEventStatus_Ok)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nWiFi Credentials SSID %s PASS %s.", wifiCred.ssid.value,
+                             wifiCred.password.value);
+            }
+            else
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nFailed to get WiFi credentials.");
+            }
+        }
+        break;
+        case kEventID_WiFiSetState:
+        {
+            if (status == kEventStatus_Ok)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nWiFi state set with success");
+            }
+            else
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nFailed to set WiFi state.");
+            }
+        }
+        break;
+        case kEventID_WiFiGetState:
+        {
+            wifi_state_t wifiState = ((wifi_event_t *)response)->state;
+            if (status == kEventStatus_Ok)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nWiFi state is %s.", (wifiState == kWiFi_On) ? "On" : "Off");
+            }
+            else
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nFailed to get WiFi state.");
+            }
+        }
+        break;
+        case kEventID_WiFiGetIP:
+        {
+            char *ip = ((wifi_event_t *)response)->ip;
+            if ((status == kEventStatus_Ok) && ip != NULL)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nWiFi IP is %s", ip);
+            }
+            else
+            {
+                SHELL_Printf(s_ShellHandle, "\r\nFailed to get WiFi ip.");
+            }
+        }
+        break;
+        case kEventID_WiFiScan:
+        {
+            if (status == kEventStatus_NonBlocking)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\n WiFi start scanning");
+            }
+            else if (status == kEventStatus_Error)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\n WiFi failed to start scanning");
+            }
+            else if (status == kEventStatus_Ok)
+            {
+                SHELL_Printf(s_ShellHandle, "\r\n SSID json list %s", (char *)response);
+            }
+        }
+        break;
+            //        case kEventID_FTPSetServerInfo:
+            //        {
+            //            if (status == kEventStatus_Ok)
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFTP info set with success");
+            //            }
+            //            else
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFailed to set FTP info.");
+            //            }
+            //        }
+            //        break;
+            //        case kEventID_FTPGetServerInfo:
+            //        {
+            //            char *server_info = ((wifi_event_t *)response)->ftpServerInfoSerialized;
+            //            if ((status == kEventStatus_Ok) && server_info != NULL)
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFTP server info is %s", server_info);
+            //            }
+            //            else
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFailed to get FTP server info.");
+            //            }
+            //        }
+            //        break;
+            //        case kEventID_FTPSetServerIP:
+            //        {
+            //            if (status == kEventStatus_Ok)
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFTP ip address set with success");
+            //            }
+            //            else
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFailed to set FTP ip address.");
+            //            }
+            //        }
+            //        break;
+            //        case kEventID_FTPGetServerIP:
+            //        {
+            //            char *ip = ((wifi_event_t *)response)->ip;
+            //            if ((status == kEventStatus_Ok) && ip != NULL)
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFTP server IP is %s", ip);
+            //            }
+            //            else
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFailed to get FTP server ip.");
+            //            }
+            //        }
+            //        break;
+            //        case kEventID_FTPSetServerPort:
+            //        {
+            //            if (status == kEventStatus_Ok)
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFTP server port set with success");
+            //            }
+            //            else
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFailed to set FTP server port.");
+            //            }
+            //        }
+            //        break;
+            //        case kEventID_FTPGetServerPort:
+            //        {
+            //            uint16_t port = ((wifi_event_t *)response)->ftpServerInfo.serverPort;
+            //            if (status == kEventStatus_Ok)
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFTP server port is %d", port);
+            //            }
+            //            else
+            //            {
+            //                SHELL_Printf(s_ShellHandle, "\r\nFailed to get FTP server port.");
+            //            }
+            //        }
+            //        break;
+#endif
         case kEventID_GetDisplayOutput:
         {
             display_output_event_t display = *(display_output_event_t *)response;
@@ -1351,6 +1549,236 @@ static shell_status_t _LpmTriggerCommand(shell_handle_t shellContextHandle, int3
         s_InputEvent.u.inputData.data = &s_CommonEvent;
         s_InputEvent.u.inputData.receiverList = receiverList;
         s_InputEvent.size = sizeof(s_CommonEvent);
+        s_InputEvent.eventId = kInputEventID_Recv;
+        s_InputCallback(s_SourceShell, &s_InputEvent, fromISR);
+    }
+
+    return kStatus_SHELL_Success;
+}
+#if defined(WIFI_ENABLED) && (WIFI_ENABLED == 1)
+static shell_status_t _WiFiCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv)
+{
+    uint32_t receiverList;
+    shell_status_t status = kStatus_SHELL_Success;
+
+    if (argc < 2)
+    {
+        SHELL_Printf(shellContextHandle, "Invalid # of parameters supplied\r\n");
+        return kStatus_SHELL_Error;
+    }
+
+    memset(&s_CommonEvent, 0, sizeof(s_CommonEvent));
+
+    if (!strcmp((char *)argv[1], "credentials"))
+    {
+        receiverList = 1 << kFWKTaskID_Input;
+
+        if (argc == 2)
+        {
+            s_CommonEvent.eventBase.eventId = kEventID_WiFiGetCredentials;
+        }
+        else if (argc == 3)
+        {
+            if (!strcmp((char *)argv[2], "erase"))
+            {
+                s_CommonEvent.eventBase.eventId = kEventID_WiFiEraseCredentials;
+            }
+            else
+            {
+                status = kStatus_SHELL_Error;
+            }
+        }
+        else
+        {
+            status = kStatus_SHELL_Error;
+        }
+    }
+    else if (!strcmp((char *)argv[1], "ip"))
+    {
+        receiverList = 1 << kFWKTaskID_Input;
+        if (argc == 2)
+        {
+            s_CommonEvent.eventBase.eventId = kEventID_WiFiGetIP;
+        }
+        else
+        {
+            status = kStatus_SHELL_Error;
+        }
+    }
+    else if (!strcmp((char *)argv[1], "ssid"))
+    {
+        if (argc > 2)
+        {
+            receiverList          = 1 << kFWKTaskID_Input;
+            wifi_cred_t *wifiCred = &s_CommonEvent.wifi.wifiCred;
+            memset(wifiCred, 0, sizeof(wifi_cred_t));
+            s_CommonEvent.eventBase.eventId = kEventID_WiFiSetCredentials;
+            wifiCred->ssid.length           = WIFI_SSID_LENGTH;
+            wifiCred->ssid.length =
+                mergeParameters((char *)&(wifiCred->ssid.value), wifiCred->ssid.length, &argv[2], (uint32_t)(argc - 2));
+            if (wifiCred->ssid.length == 0)
+            {
+                status = kStatus_SHELL_Error;
+            }
+        }
+        else
+        {
+            status = kStatus_SHELL_Error;
+        }
+    }
+    else if (!strcmp((char *)argv[1], "password"))
+    {
+        if (argc > 2)
+        {
+            receiverList          = 1 << kFWKTaskID_Input;
+            wifi_cred_t *wifiCred = &s_CommonEvent.wifi.wifiCred;
+            memset(wifiCred, 0, sizeof(wifi_cred_t));
+            s_CommonEvent.eventBase.eventId = kEventID_WiFiSetCredentials;
+            wifiCred->password.length       = WIFI_PASSWORD_LENGTH;
+            wifiCred->password.length = mergeParameters((char *)&(wifiCred->password.value), wifiCred->password.length,
+                                                        &argv[2], (uint32_t)(argc - 2));
+            if (wifiCred->password.length == 0)
+            {
+                status = kStatus_SHELL_Error;
+            }
+        }
+        else
+        {
+            status = kStatus_SHELL_Error;
+        }
+    }
+    else if (!strcmp((char *)argv[1], "state"))
+    {
+        receiverList = 1 << kFWKTaskID_Input;
+        if (argc == 2)
+        {
+            s_CommonEvent.eventBase.eventId = kEventID_WiFiGetState;
+        }
+        else if (argc == 3)
+        {
+            if (!strcmp((char *)argv[2], "on"))
+            {
+                s_CommonEvent.eventBase.eventId = kEventID_WiFiSetState;
+                s_CommonEvent.wifi.state        = kWiFi_On;
+            }
+            else if (!strcmp((char *)argv[2], "off"))
+            {
+                s_CommonEvent.eventBase.eventId = kEventID_WiFiSetState;
+                s_CommonEvent.wifi.state        = kWiFi_Off;
+            }
+            else
+            {
+                status = kStatus_SHELL_Error;
+            }
+        }
+    }
+    else if (!strcmp((char *)argv[1], "reset"))
+    {
+        receiverList = 1 << kFWKTaskID_Input;
+        if (argc == 2)
+        {
+            s_CommonEvent.eventBase.eventId = kEventID_WiFiReset;
+        }
+        else
+        {
+            status = kStatus_SHELL_Error;
+        }
+    }
+    else if (!strcmp((char *)argv[1], "scan"))
+    {
+        receiverList = 1 << kFWKTaskID_Input;
+        if (argc == 2)
+        {
+            s_CommonEvent.eventBase.eventId = kEventID_WiFiScan;
+        }
+        else
+        {
+            status = kStatus_SHELL_Error;
+        }
+    }
+//    else if (!strcmp((char *)argv[1], "ftp_server"))
+//    {
+//        receiverList = 1 << kFWKTaskID_Input;
+//        if (argc == 2)
+//        {
+//            s_CommonEvent.eventBase.eventId = kEventID_FTPGetServerInfo;
+//        }
+//        else if (argc == 4)
+//        {
+//            char *pEnd;
+//            s_CommonEvent.eventBase.eventId           = kEventID_FTPSetServerInfo;
+//            s_CommonEvent.wifi.ftpServerInfo.serverIP = net_inet_aton(argv[2]);
+//
+//            uint32_t port = strtol(argv[3], &pEnd, 10);
+//            if (pEnd == argv[3] || port > (uint16_t)(-1))
+//            {
+//                SHELL_Printf(shellContextHandle, "Not a valid port\r\n");
+//                return kStatus_SHELL_Error;
+//            }
+//
+//            s_CommonEvent.wifi.ftpServerInfo.serverPort = port;
+//        }
+//        else
+//        {
+//            status = kStatus_SHELL_Error;
+//        }
+//    }
+    else
+    {
+        status = kStatus_SHELL_Error;
+    }
+
+    if (status == kStatus_SHELL_Error)
+    {
+        SHELL_Printf(shellContextHandle, "Invalid parameters supplied\r\n");
+        return kStatus_SHELL_Error;
+    }
+
+    if (s_InputCallback != NULL)
+    {
+        uint8_t fromISR                       = __get_IPSR();
+        s_InputEvent.u.inputData.data         = &s_CommonEvent;
+        s_InputEvent.u.inputData.receiverList = receiverList;
+        s_InputEvent.u.inputData.copy         = true;
+        s_InputEvent.size                     = sizeof(event_common_t);
+        s_CommonEvent.eventBase.respond       = _HalEventsHandler;
+        s_InputCallback(s_SourceShell, &s_InputEvent, fromISR);
+    }
+
+    return status;
+}
+#endif
+
+static shell_status_t _BleAddressCommand(shell_handle_t shellContextHandle, int32_t argc, char **argv)
+{
+    uint32_t receiverList;
+
+    if (argc != 2)
+    {
+        SHELL_Printf(shellContextHandle, "Invalid # of parameters supplied\r\n");
+        return kStatus_SHELL_Error;
+    }
+
+    if (!strcmp((char *)argv[1], "address"))
+    {
+        s_CommonEvent.eventBase.eventId = kEventID_GetBLEConnection;
+    }
+    else
+    {
+        SHELL_Printf(shellContextHandle, "Invalid display type\r\n");
+        return kStatus_SHELL_Error;
+    }
+
+    receiverList = 1 << kFWKTaskID_Output;
+
+    if (s_InputCallback != NULL)
+    {
+        uint8_t fromISR                 = __get_IPSR();
+        s_CommonEvent.eventBase.respond = _HalEventsHandler;
+
+        s_InputEvent.u.inputData.data         = &s_CommonEvent;
+        s_InputEvent.u.inputData.receiverList = receiverList;
+        s_InputEvent.size                     = sizeof(s_CommonEvent);
         s_InputEvent.eventId = kInputEventID_Recv;
         s_InputCallback(s_SourceShell, &s_InputEvent, fromISR);
     }

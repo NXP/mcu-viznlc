@@ -57,6 +57,7 @@ int APP_RegisterHalDevices(void)
 
     if (defaultDisplayOutput == kDisplayOutput_Panel)
     {
+#ifdef ENABLE_DISPLAY_DEV_LcdifRk024hh298
         ret = HAL_DisplayDev_LcdifRk024hh298_Register();
 
         if (ret != 0)
@@ -64,17 +65,18 @@ int APP_RegisterHalDevices(void)
             LOGE("Display panel register error %d", ret);
             return ret;
         }
+#endif
     }
     else
     {
-
+#ifdef ENABLE_DISPLAY_DEV_UsbUvc
         ret = HAL_DisplayDev_UsbUvc_Register();
         if (ret != 0)
         {
             LOGE("HAL_DisplayDev_UsbUvc_Register error %d", ret);
             return ret;
         }
-
+#endif
     }
 #endif
 
@@ -245,6 +247,23 @@ int APP_RegisterHalDevices(void)
     }
 #endif
 
+#ifdef ENABLE_INPUT_DEV_WiFiAWAM510
+    ret = HAL_WiFiAWAM510_Register();
+	if (ret != 0)
+	{
+		LOGE("HAL_InputDev_WiFiAWAM510_Register error %d", ret);
+		return ret;
+	}
+#endif
+
+#ifdef ENABLE_DISPLAY_DEV_UsbCdc2D
+	ret = HAL_DisplayDev_UsbCdc_Register();
+	if (ret != 0)
+	{
+        LOGE("HAL_DisplayDev_UsbCdc_Register error %d", ret);
+        return ret;
+	}
+#endif
     return ret;
 
 }

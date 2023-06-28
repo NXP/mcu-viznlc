@@ -688,7 +688,7 @@ hal_config_status_t HAL_OutputDev_SmartLockConfig_Init()
 #if ENABLE_CSI_3DCAMERA || ENABLE_MIPI_3DCAMERA || ENABLE_3D_SIMCAMERA
             app_config.irPwm = 0;
 #else
-            app_config.irPwm = 50;
+            app_config.irPwm = 100;
 #endif
             memcpy(app_config.password, "000000", sizeof(app_config.password));
             app_config.faceRecThreshold = DEFAULT_FACE_REC_THRESHOLD;

@@ -34,6 +34,7 @@ extern "C" {
 
 int HAL_GfxDev_Pxp_Register();
 int HAL_DisplayDev_UsbUvc_Register();
+int HAL_DisplayDev_UsbCdc_Register();
 int HAL_LpmDev_Register();
 int HAL_OutputDev_UiSmartlock_Register();
 int HAL_OutputDev_UiFfi_Register();
@@ -43,6 +44,7 @@ int HAL_OutputDev_IrWhiteLeds_Register();
 int HAL_InputDev_PushButtons_Register();
 int HAL_OutputDev_SmartLockConfig_Register();
 int HAL_Dev_BleWuartQn9090_Register();
+int HAL_WiFiAWAM510_Register();
 int HAL_Dev_ATCommands_Register();
 
 int HAL_InputDev_ShellUsb_Register();
@@ -52,6 +54,7 @@ int HAL_DisplayDev_LcdifRk024hh298_Register();
 /* App task ID offset definition here. App task ID will start from kFWKTaskID_APPStart */
 
 #define MQS_AUDIO_TASK_ID APP_TASK_ID(1)
+#define kAppTaskID_WiFi   APP_TASK_ID(2)
 int HAL_OutputDev_MqsAudio_Register();
 
 // for vision_algo_oasis_lite2D device

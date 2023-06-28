@@ -467,14 +467,14 @@ static void ui_drawDebugWindow(oasis_lite_debug_t debugInfo)
                  (int)kFont_OpenSans8, txt);
     debugRow += 15;
     memset(txt, 0, sizeof(txt));
-    sprintf(txt, "3d_fake: %d", debugInfo.is3dFake);
-    textColor = debugInfo.is3dFake ? RGB565_RED : RGB565_GREEN;
+    sprintf(txt, "rgb_fake: %d", debugInfo.rgbFake);
+    textColor = debugInfo.rgbFake ? RGB565_RED : RGB565_GREEN;
     gfx_drawText(&s_UiSurface, UI_MAINWINDOW_DEBUG_X, UI_MAINWINDOW_DEBUG_Y + debugRow, textColor, 0x0,
                  (int)kFont_OpenSans8, txt);
     debugRow += 15;
     memset(txt, 0, sizeof(txt));
-    sprintf(txt, "2d_fake: %d", debugInfo.is2dFake);
-    textColor = debugInfo.is2dFake ? RGB565_RED : RGB565_GREEN;
+    sprintf(txt, "ir_fake: %d", debugInfo.irFake);
+    textColor = debugInfo.irFake ? RGB565_RED : RGB565_GREEN;
     gfx_drawText(&s_UiSurface, UI_MAINWINDOW_DEBUG_X, UI_MAINWINDOW_DEBUG_Y + debugRow, textColor, 0x0,
                  (int)kFont_OpenSans8, txt);
     debugRow += 15;
@@ -784,7 +784,14 @@ static hal_output_status_t HAL_OutputDev_UiFfi_InputNotify(const output_dev_t *d
         s_LogLevel           = event.logLevel.logLevel;
         s_RefreshUI          = true;
     }
-
+#if defined(WIFI_ENABLED) && (WIFI_ENABLED == 1)
+    else if (eventBase.eventId == kEventID_WiFiConnected)
+    {
+        event_common_t event = *(event_common_t *)data;
+        s_WiFiIsOn           = event.wifi.isConnected;
+        _ui_drawBottomInfo(&s_LastOasisResult);
+    }
+#endif
     if (s_UiSurface.lock)
     {
         xSemaphoreGive(s_UiSurface.lock);

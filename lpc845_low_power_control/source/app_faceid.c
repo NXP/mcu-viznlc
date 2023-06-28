@@ -33,8 +33,8 @@
 /*******************************************************************************
  * Variables
  ******************************************************************************/
-static volatile uint8_t g_FACEIDTaskStatus = 0;
 static volatile uint8_t g_FACEIDCmdStatus  = 0;
+static uint8_t g_CommandBuf[FACEID_RX_BUFFER_SIZE];
 
 static uint8_t g_FACEIDRecvBuf[FACEID_RX_BUFFER_SIZE];
 static uint8_t g_FACEIDTxBuf[FACEID_TX_BUFFER_SIZE];
@@ -42,7 +42,6 @@ static uint8_t g_FACEIDTxBuf[FACEID_TX_BUFFER_SIZE];
 static volatile uint16_t g_FACEIDrxIndex = 0; /* Index of the memory to save new arrived data. */
 static volatile uint8_t *g_FACEIDCmdCmp  = NULL;
 
-static volatile uint8_t g_FACEIDDeviceStatus = 0; // 0 - sleep, 1 - active
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -58,12 +57,17 @@ void FACEID_USART_IRQHANDLER(void)
         if (g_FACEIDrxIndex == FACEID_RX_BUFFER_SIZE)
         {
             g_FACEIDrxIndex = 0;
+            memset(g_FACEIDRecvBuf,0,sizeof(g_FACEIDRecvBuf));
         }
+
         if (g_FACEIDrxIndex >= 2 &&
             ((g_FACEIDRecvBuf[g_FACEIDrxIndex - 2] == '\r' && g_FACEIDRecvBuf[g_FACEIDrxIndex - 1] == '\n') ||
              (g_FACEIDRecvBuf[g_FACEIDrxIndex - 1] == '\r' && g_FACEIDRecvBuf[g_FACEIDrxIndex - 2] == '\n')))
         {
             g_FACEIDCmdStatus = 1;
+            memcpy(g_CommandBuf,g_FACEIDRecvBuf,sizeof(g_FACEIDRecvBuf));
+            g_FACEIDrxIndex = 0;
+            memset(g_FACEIDRecvBuf,0,sizeof(g_FACEIDRecvBuf));
         }
     }
 }
@@ -85,22 +89,22 @@ status_t FACEID_UARTStringSend(char *str, uint32_t len)
  */
 void APP_FACEID_Init(void)
 {
-    g_FACEIDrxIndex = 0;
-    memset((uint8_t *)g_FACEIDRecvBuf, 0x00, FACEID_RX_BUFFER_SIZE);
-    g_FACEIDTaskStatus = FACEIDTASKIDLE;
-    Board_PullFaceIdPwrCtlPin(1);
-    g_FACEIDDeviceStatus = 1; // active
-}
-/**
- * @brief   Clean FACEID Task Status
- * @param   NULL
- * @return  NULL
- */
-static void faceid_status_clean(void)
-{
-    g_FACEIDrxIndex = 0;
-    memset((uint8_t *)g_FACEIDRecvBuf, 0x00, FACEID_RX_BUFFER_SIZE);
+
+	DisableIRQ(FACEID_USART_IRQN);
     g_FACEIDCmdStatus = 0;
+    memset(g_CommandBuf,0,sizeof(g_CommandBuf));
+    EnableIRQ(FACEID_USART_IRQN);
+
+
+    //please don't move this delay
+	{
+		// code that you do not want to be optimized
+		volatile uint32_t counter = 0x8FFFUL;
+		while(counter--);
+	}
+
+
+    Board_PullFaceIdPwrCtlPin(1);
 }
 
 static char *strupr(char *str)
@@ -249,49 +253,50 @@ uint32_t faceid_task(uint8_t *buf, uint32_t *ret)
 uint8_t APP_FACEID_Task(void)
 {
     uint32_t ret = FACEIDIDLE, value;
+	DisableIRQ(FACEID_USART_IRQN);
 
     if (g_FACEIDCmdStatus == 1)
     {
-        ret = faceid_task((uint8_t *)g_FACEIDRecvBuf, &value);
-
-        faceid_status_clean();
+        ret = faceid_task((uint8_t *)g_CommandBuf, &value);
+        memset(g_CommandBuf, 0x00, sizeof(g_CommandBuf));
+        g_FACEIDCmdStatus = 0;
+        EnableIRQ(FACEID_USART_IRQN);
     }
+    else
+    {
+    	//there is no message comes from FaceID module
+    	EnableIRQ(FACEID_USART_IRQN);
+    	return FACEIDIDLE;
+    }
+
 
     if (ret == FACEIDVALIDE)
     {
-//        ret = FACEIDIDLE;
         PRINTF("*** Valid User Face, unlock the door\r\n");
         return FACEIDUNLOCK;
-    }
-
-    if (ret == FACEIDPWROFFACK)
+    }else if (ret == FACEIDPWROFFACK)
     {
-//        ret = FACEIDIDLE;
         PRINTF("*** PWR OFF ACK \r\n");
         return FACEIDPWROFFACK;
-    }
-
-    if (ret == FACEIDPWROFFNACK)
+    }else if (ret == FACEIDPWROFFNACK)
     {
-        ret = FACEIDIDLE;
         PRINTF("*** PWR OFF NACK \r\n");
         return FACEIDPWROFFNACK;
-    }
+    }else
+    {
 
-    /* Task Return Idle Status */
-    return ret;
+		/* Task Return Idle Status */
+		return FACEIDIDLE;
+    }
 }
 
 void APP_FACEID_Deinit(void)
 {
     Board_PullFaceIdPwrCtlPin(0);
-    g_FACEIDDeviceStatus = 0; // sleep
+
 }
 
-uint8_t APP_FACEID_GetDeviceStatus(void)
-{
-    return g_FACEIDDeviceStatus;
-}
+
 
 status_t APP_FACEID_RequestPowerOff(void)
 {

@@ -275,7 +275,7 @@ static int _oasis_lite_Log(const char *formatString)
 
 static int Oasis_Init(int appType)
 {
-    LOGD("++Oasis_Init");
+    LOGD("++Oasis_Init = %d ", appType);
     OASISLTResult_t oasis_ret = OASISLT_OK;
 
     memset(&gOasisLite, 0, sizeof(gOasisLite));
@@ -299,6 +299,8 @@ static int Oasis_Init(int appType)
     gOasisLite.config.memPool             = NULL;
     gOasisLite.config.fastMemBuf         = NULL;
     gOasisLite.config.fastMemSize        = 0;
+    gOasisLite.config.runtimePara.brightnessTH[0] = 80;
+    gOasisLite.config.runtimePara.brightnessTH[1] = 180;
 
     gOasisLite.run_flag = OASIS_DET_REC_REG_REMOTE;
 
